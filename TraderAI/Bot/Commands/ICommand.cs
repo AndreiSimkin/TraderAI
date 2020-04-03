@@ -7,7 +7,7 @@ namespace TraderAI.Bot.Commands
     public interface ICommand
     {
         Code Run(Entity entity, Tick tick);
-        void Generate(Random random, double percent, int tree);
+        void Generate(Entity entity, Random random, double percent, int tree);
         ICommand Clone();
     }
 }

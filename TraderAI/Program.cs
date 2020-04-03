@@ -43,7 +43,7 @@ namespace TraderAI
             return data;
         }
 
-        static void Main(string[] args)
+        static void Main()
         {
             var Ticks = (List<Bot.Tick>)LoadObject("12_02_2020.ticks");
             Random random = new Random();
@@ -55,11 +55,11 @@ namespace TraderAI
             int ECount = 45;
 
             for (int i = entitiesgen.Count; i < 10; i++)
-                entitiesgen.Add(new Bot.Entity(random, new Bot.Entity.Account(EBalance)));
+                entitiesgen.Add(new Bot.Entity(random, new Bot.Account(EBalance)));
 
-            bool GenerateNew = true;
+         //   bool GenerateNew = true;
 
-            double MaxFactor = 0;
+            double MaxFactor;
             double MaxBalance = 0;
             int MaxIter = 0;
             int tick = 0;
@@ -75,7 +75,7 @@ namespace TraderAI
                     if (tick >= Ticks.Count)
                         tick = 0;
                     foreach (Bot.Entity entity in entitiesgen)
-                        entity.NextStep(Ticks[tick]);
+                        entity.Run(Ticks[tick]);
                 }
 
                 List<Bot.Entity> newentitiesgen = new List<Bot.Entity>();
@@ -106,7 +106,7 @@ namespace TraderAI
                             if (ECount > seg)
                             {
                                 newentitiesgen.Add(entitiesgen[i].Clone(EBalance, true));
-                                newentitiesgen.Last().MainField.Generate(random, GPercent, 0);
+                                newentitiesgen.Last().Generate(random, GPercent);
                                 seg++;
                             }
                         }
@@ -126,7 +126,7 @@ namespace TraderAI
 
                 if (newentitiesgen.Count == 0)
                     for (int i = newentitiesgen.Count; i < 10; i++)
-                        newentitiesgen.Add(new Bot.Entity(random, new Bot.Entity.Account(EBalance)));
+                        newentitiesgen.Add(new Bot.Entity(random, new Bot.Account(EBalance)));
 
                 entitiesgen.Clear();
                 entitiesgen = newentitiesgen;

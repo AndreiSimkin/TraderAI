@@ -9,12 +9,9 @@ namespace TraderAI.Bot.Commands
         public int Ticks { get; set; } = -1;
         int Timer { get; set; } = -1;
 
-        public ICommand Clone()
-        {
-            return new Wait() { Ticks = Ticks };
-        }
+        public ICommand Clone() => new Wait() { Ticks = Ticks };
 
-        public void Generate(Random random, double percent, int tree)
+        public void Generate(Entity entity, Random random, double percent, int tree)
         {
             if (Ticks == -1)
                 Ticks = random.Next(1, 1000);
@@ -24,7 +21,7 @@ namespace TraderAI.Bot.Commands
                 Ticks = 1000 - Ticks;
         }
 
-        public void Start(Entity entity)
+        public void Start()
         {
             Timer = Ticks;
         }
@@ -37,7 +34,7 @@ namespace TraderAI.Bot.Commands
         public Code Run(Entity entity, Tick tick)
         {
             if (Timer == -1)
-                Start(entity);
+                Start();
             Timer--;
             if (Timer == 0)
             {

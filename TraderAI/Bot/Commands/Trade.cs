@@ -8,12 +8,9 @@ namespace TraderAI.Bot.Commands
     {
         public long Count { get; set; }
 
-        public ICommand Clone()
-        {
-            return new Trade() { Count = Count };
-        }
+        public ICommand Clone() => new Trade() { Count = Count };
 
-        public void Generate(Random random, double percent, int tree)
+        public void Generate(Entity entity, Random random, double percent, int tree)
         {
             Count += random.Next(-(int)(10 * (percent)), (int)(10 * (percent)));
         }
