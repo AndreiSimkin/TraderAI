@@ -7,10 +7,8 @@ namespace TraderAI.Bot.Commands
     public class Wait : ICommand
     {
         public int Ticks { get; set; } = -1;
-        public bool Waiting { get => Timer > 0; }
-        public int SubSteps { get; set; } = 0;
-
         int Timer { get; set; } = -1;
+
         public ICommand Clone()
         {
             return new Wait() { Ticks = Ticks };

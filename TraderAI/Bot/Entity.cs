@@ -33,6 +33,7 @@ namespace TraderAI.Bot
                 .SelectMany(s => s.GetTypes())
                 .Where(p => typeof(ICommand).IsAssignableFrom(p)).ToList();
                 AvailableCommands.Remove(typeof(ICommand));
+                AvailableCommands.Remove(typeof(Field));
             }
             
         }
@@ -111,25 +112,28 @@ namespace TraderAI.Bot
 
             for (int i = 0; i < iterations; i++)
             {
-                int action = random.Next(0, 2);
+                int action = random.Next(0, 3);
 
                 if (action == 0)
                 {
-                    ICommand command = CreateCommand(random);
-                    command.Generate(random, percent, tree);
-                    commands.Insert(random.Next(0, commands.Count), command);
+                    if (commands.Count < 100)
+                    {
+                        ICommand command = CreateCommand(random);
+                        command.Generate(random, percent, tree);
+                        commands.Insert(random.Next(0, commands.Count), command);
+                    }
                 }
                 else if (commands.Count > 0)
                     if (action == 1)
-                        commands[random.Next(0, commands.Count - 1)].Generate(random, percent, tree);
+                        commands[random.Next(0, commands.Count)].Generate(random, percent, tree);
                     else if (action == 2)
-                        commands.RemoveAt(random.Next(0, commands.Count - 1));
+                        commands.RemoveAt(random.Next(0, commands.Count));
             }
         }
 
         public Entity Clone(double balance, bool newgen = false)
         {
-            return new Entity() { Trade = Trade.Clone(balance, newgen), MainField = (Field)MainField.Clone(), Fields = Fields.ConvertAll((Field field) => { return (Field)field.Clone(); }) };
+            return new Entity() { Trade = Trade.Clone(balance, newgen), MainField = (Field)MainField.Clone() };
         }
 
         public int CompareTo(Entity other)

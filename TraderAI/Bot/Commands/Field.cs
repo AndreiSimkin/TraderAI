@@ -7,7 +7,7 @@ namespace TraderAI.Bot.Commands
 {
     public class Field : ICommand
     {
-        const int MaxTree = 4;
+        const int MaxTree = 5;
         public List<ICommand> Commands { get; set; } = new List<ICommand>();
 
         public ICommand Clone()

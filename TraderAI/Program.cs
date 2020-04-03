@@ -52,9 +52,9 @@ namespace TraderAI
             double EBalance = 10000;
             int GTicks = Ticks.Count / 24;
             double GPercent = 0.3;
-            int ECount = 15;
+            int ECount = 45;
 
-            for (int i = entitiesgen.Count; i < ECount; i++)
+            for (int i = entitiesgen.Count; i < 10; i++)
                 entitiesgen.Add(new Bot.Entity(random, new Bot.Entity.Account(EBalance)));
 
             bool GenerateNew = true;
@@ -78,25 +78,19 @@ namespace TraderAI
                         entity.NextStep(Ticks[tick]);
                 }
 
-                entitiesgen.Sort();
-
-                if (entitiesgen.Last().Trade.Ballance > MaxBalance)
-                    MaxBalance = entitiesgen.Last().Trade.Ballance;
-
-                if (entitiesgen.Last().Trade.Ballance > MaxBalance)
-                    MaxBalance = entitiesgen.Last().Trade.Ballance;
-
-                for (int i = 0; i < entitiesgen.Count; i++)
-                    if (entitiesgen[i].Trade.Factor > MaxFactor)
-                        MaxFactor = entitiesgen[i].Trade.Factor;
-
                 List<Bot.Entity> newentitiesgen = new List<Bot.Entity>();
+
+                int seg = 0;
+                for (int i = 0; i < entitiesgen.Count; i++)
+                {
+                    entitiesgen[i].Trade.Fix(EBalance);
+                    if (entitiesgen[i].Trade.Factor > AverageFactor || entitiesgen[i].Trade.Iteration < MinIter)
+                        seg++;
+                }
 
                 MaxFactor = 0;
                 for (int i = 0; i < entitiesgen.Count; i++)
                 {
-                    entitiesgen[i].Trade.Fix(EBalance);
-
                     if (entitiesgen[i].Trade.Iteration >= MinIter)
                     {
                         if (entitiesgen[i].Trade.Factor > AverageFactor)
@@ -105,12 +99,15 @@ namespace TraderAI
                                 MaxFactor = entitiesgen[i].Trade.Factor;
                             if (entitiesgen[i].Trade.Iteration > MaxIter)
                                 MaxIter = entitiesgen[i].Trade.Iteration;
+                            if (entitiesgen[i].Trade.Ballance > MaxBalance)
+                                MaxBalance = entitiesgen[i].Trade.Ballance;
 
                             newentitiesgen.Add(entitiesgen[i].Clone(EBalance));
-                            if (ECount > entitiesgen.Count)
+                            if (ECount > seg)
                             {
                                 newentitiesgen.Add(entitiesgen[i].Clone(EBalance, true));
                                 newentitiesgen.Last().MainField.Generate(random, GPercent, 0);
+                                seg++;
                             }
                         }
                     }
@@ -118,6 +115,7 @@ namespace TraderAI
                         newentitiesgen.Add(entitiesgen[i].Clone(EBalance));
                 }
 
+                entitiesgen.Sort();
                 Console.SetCursorPosition(0, 0);
                 for (int i = entitiesgen.Count - 1; i >= 0; i--)
                     Console.WriteLine("#" + (entitiesgen.Count - i) + "(" + entitiesgen[i].Trade.Iteration + ")(f" + (entitiesgen[i].Trade.Iteration > 10 ? Math.Round(entitiesgen[i].Trade.Factor, 3).ToString() : "?")  + "): Balance: " + entitiesgen[i].Trade.Ballance + "$                             ");
@@ -127,7 +125,7 @@ namespace TraderAI
                 Console.Title = "Max iteration: " + MaxIter + ", Max factor: " + MaxFactor + ", Max ballance: " + MaxBalance + "$";
 
                 if (newentitiesgen.Count == 0)
-                    for (int i = newentitiesgen.Count / 2; i < ECount; i++)
+                    for (int i = newentitiesgen.Count; i < 10; i++)
                         newentitiesgen.Add(new Bot.Entity(random, new Bot.Entity.Account(EBalance)));
 
                 entitiesgen.Clear();

@@ -8,7 +8,6 @@ namespace TraderAI.Bot.Commands
     {
         public double Value { get; set; }
         public int Step { get; set; } = -1;
-        public int SubSteps { get; set; } = 2;
 
         public ICommand Clone()
         {
@@ -20,7 +19,7 @@ namespace TraderAI.Bot.Commands
 
         public void Generate(Random random, double percent, int tree)
         {
-            if (percent == 1.0)
+            if (Step == -1)
                 Step = random.Next(1, 1000);
             Value += ((random.NextDouble() - 0.5) * 2.0) * Step;
 
@@ -29,6 +28,7 @@ namespace TraderAI.Bot.Commands
                 OKField = new Field();
                 FailField = new Field();
             }
+
 
             OKField.Generate(random, percent, tree);
             FailField.Generate(random, percent, tree);
