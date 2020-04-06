@@ -19,5 +19,10 @@ namespace TraderAI.Bot
         }
 
         public bool Equals([AllowNull] Tick other) => Time == other.Time && Price == other.Price;
+
+        public override string ToString()
+        {
+            return Price.ToString();
+        }
     }
 }

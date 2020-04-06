@@ -7,7 +7,7 @@ namespace TraderAI.Bot.Commands
 {
     public class Field : ICommand
     {
-        const int MaxTree = 5;
+        const int MaxTree = 4;
         public List<ICommand> Commands { get; set; } = new List<ICommand>();
 
         public ICommand Clone()
@@ -42,7 +42,7 @@ namespace TraderAI.Bot.Commands
 
                     if (action == 0)
                     {
-                        if (Commands.Count < 100)
+                        if (Commands.Count < 10)
                         {
                             ICommand command = (Activator.CreateInstance(AvailableCommands.ElementAt(random.Next(0, AvailableCommands.Count()))) as ICommand);
                             command.Generate(entity, random, 1.0, tree);

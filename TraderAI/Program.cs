@@ -10,22 +10,6 @@ namespace TraderAI
 {
     class Program
     {
-        static List<Bot.Tick> GetHistory(DateTime date)
-        {
-            List<Bot.Tick> ticks = new List<Bot.Tick>();
-            WebClient web = new WebClient();
-            string url = $"http://export.finam.ru/market=517&em=419805&code=SPBEX.AAPL&apply=0&df={date.Day}&mf={date.Month}&yf={date.Year}&from={date.ToShortDateString()}&dt={date.Day}&mt={date.Month}&yt={date.Year}&to={date.ToShortDateString()}&p=1&cn=SPBEX.AAPL&dtf=4&tmf=3&MSOR=1&mstime=on&mstimever=1&sep=3&sep2=3&datf=10&fsp=1";
-            string[] data = web.DownloadString(url).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (string tick in data)
-            {
-                string[] split = tick.Split(new char[] { ';' });
-                ticks.Add(new Bot.Tick(DateTime.Parse(split[0].Replace('/', '.') + " " + split[1]).Ticks, double.Parse(split[2].Replace('.', ','))));
-            }
-
-            return ticks;
-        }
-
         static BinaryFormatter Formatter { get; set; } = new BinaryFormatter();
 
         static void SaveObject(string path, object data)
@@ -43,14 +27,59 @@ namespace TraderAI
             return data;
         }
 
+        static DateTime LastDownload { get; set; }
+
+        enum Market { MOEX = 10003}
+
+        static List<Bot.Tick> GetHistory(DateTime date, Market market, string code)
+        {
+            Directory.CreateDirectory("HistoryData/" + market + "/" + code);
+            if (File.Exists("HistoryData/" + market + "/" + code + "/" + date.ToShortDateString().Replace('.', '_') + ".ticks"))
+                return (List<Bot.Tick>)LoadObject("HistoryData/" + market + "/" + code +  "/" + date.ToShortDateString().Replace('.', '_') + ".ticks");
+            else
+            {
+                TimeSpan time = new TimeSpan(DateTime.Now.Ticks - LastDownload.Ticks);
+                if (time.Milliseconds < 1000)
+                    System.Threading.Thread.Sleep(1000 - time.Milliseconds);
+                List<Bot.Tick> ticks = new List<Bot.Tick>();
+                WebClient web = new WebClient();
+                string url = $"http://export.finam.ru/market={((int)market).ToString().Split(new string[] { "000" }, StringSplitOptions.RemoveEmptyEntries)[0]}&em={((int)market).ToString().Split(new string[] { "000" }, StringSplitOptions.RemoveEmptyEntries)[1]}&code={code}&apply=0&df={date.Day}&mf={date.Month - 1}&yf={date.Year}&from={date.ToShortDateString()}&dt={date.Day}&mt={date.Month - 1}&yt={date.Year}&to={date.ToShortDateString()}&p=1&cn={code}&dtf=4&tmf=3&MSOR=1&mstime=on&mstimever=1&sep=3&sep2=3&datf=10&fsp=1";
+                string[] data = web.DownloadString(url).Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                LastDownload = DateTime.Now;
+                if (data.Length > 1)
+                    foreach (string tick in data)
+                    {
+                        string[] split = tick.Split(new char[] { ';' });
+                        ticks.Add(new Bot.Tick(DateTime.Parse(split[0].Replace('/', '.') + " " + split[1]).Ticks, double.Parse(split[2].Replace('.', ','))));
+                    }
+
+                SaveObject("HistoryData/" + market + "/" + code + "/" + date.ToShortDateString().Replace('.', '_') + ".ticks", ticks);
+
+                return ticks;
+            }
+        }
+
         static void Main()
         {
-            var Ticks = (List<Bot.Tick>)LoadObject("12_02_2020.ticks");
+            /*
+            for (int i = 0; i < 366 * 13; i++)
+            {
+                var ticks = GetHistory(CurrentDate, Market.MOEX, "SBER"); 
+                if (CurrentDate.DayOfWeek == DayOfWeek.Monday)
+                    CurrentDate = CurrentDate.AddDays(-3);
+                else
+                    CurrentDate = CurrentDate.AddDays(-1);
+                GC.Collect();
+            }*/
+
+
+            DateTime CurrentDate = DateTime.Parse("17.03.2009");
+            var Ticks = GetHistory(CurrentDate, Market.MOEX, "SBER");
             Random random = new Random();
             List<Bot.Entity> entitiesgen = new List<Bot.Entity>();
 
-            double EBalance = 10000;
-            int GTicks = Ticks.Count / 24;
+            double EBalance = 100000;
+            int GTicks = Ticks.Count / 10;
             double GPercent = 0.3;
             int ECount = 45;
 
@@ -66,14 +95,41 @@ namespace TraderAI
 
             int MinIter = 10;
 
-            double AverageFactor = 1;
-
+            double MinAverageFactor = 0.1;
+            double AverageFactor = MinAverageFactor;
+            double newAverageFactor = 0;
+            int newAverageFactorCount = 0;
             while (true)
             {
                 for (int i = 0; i < GTicks; i++, tick++)
                 {
                     if (tick >= Ticks.Count)
+                    {
+                        do
+                        {
+                            if (newAverageFactorCount > 0)
+                            {
+                                if (CurrentDate.ToShortDateString() == "03.03.2020")
+                                {
+                                    CurrentDate = DateTime.Parse("02.05.2017");
+                                }
+                                else
+                                    CurrentDate = CurrentDate.AddDays(1);
+                                Ticks.Clear();
+                                Ticks = GetHistory(CurrentDate, Market.MOEX, "SBER");
+                                GC.Collect(GC.MaxGeneration);
+                            }
+                            else if (CurrentDate.ToShortDateString() != "17.03.2009")
+                            {
+                                CurrentDate = DateTime.Parse("17.03.2009");
+                                Ticks.Clear();
+                                Ticks = GetHistory(CurrentDate, Market.MOEX, "SBER");
+                                GC.Collect(GC.MaxGeneration);
+                            }
+                        } while (Ticks.Count < 100000);
                         tick = 0;
+                        GTicks = Ticks.Count / 10;
+                    }
                     foreach (Bot.Entity entity in entitiesgen)
                         entity.Run(Ticks[tick]);
                 }
@@ -83,16 +139,23 @@ namespace TraderAI
                 int seg = 0;
                 for (int i = 0; i < entitiesgen.Count; i++)
                 {
-                    entitiesgen[i].Trade.Fix(EBalance);
+                     entitiesgen[i].Trade.Fix(EBalance);
                     if (entitiesgen[i].Trade.Factor > AverageFactor || entitiesgen[i].Trade.Iteration < MinIter)
                         seg++;
                 }
 
                 MaxFactor = 0;
+                newAverageFactor = 0;
+                newAverageFactorCount = 0;
+
                 for (int i = 0; i < entitiesgen.Count; i++)
                 {
                     if (entitiesgen[i].Trade.Iteration >= MinIter)
                     {
+                        if (entitiesgen[i].Trade.Factor > 0)
+                        {
+
+                        }
                         if (entitiesgen[i].Trade.Factor > AverageFactor)
                         {
                             if (entitiesgen[i].Trade.Factor > MaxFactor)
@@ -101,7 +164,8 @@ namespace TraderAI
                                 MaxIter = entitiesgen[i].Trade.Iteration;
                             if (entitiesgen[i].Trade.Ballance > MaxBalance)
                                 MaxBalance = entitiesgen[i].Trade.Ballance;
-
+                            newAverageFactor += entitiesgen[i].Trade.Factor;
+                            newAverageFactorCount++;
                             newentitiesgen.Add(entitiesgen[i].Clone(EBalance));
                             if (ECount > seg)
                             {
@@ -116,13 +180,26 @@ namespace TraderAI
                 }
 
                 entitiesgen.Sort();
+
+                if (newAverageFactorCount > 0)
+                {
+                    double change = (entitiesgen.Last().Trade.Factor - AverageFactor - (entitiesgen.Last().Trade.Factor * 0.15)) / 100;
+                    if (change > 0)
+                        AverageFactor += change;
+                }
+                else
+                    AverageFactor = MinAverageFactor;
+
+                if (AverageFactor < MinAverageFactor)
+                    AverageFactor = MinAverageFactor;
+
                 Console.SetCursorPosition(0, 0);
                 for (int i = entitiesgen.Count - 1; i >= 0; i--)
-                    Console.WriteLine("#" + (entitiesgen.Count - i) + "(" + entitiesgen[i].Trade.Iteration + ")(f" + (entitiesgen[i].Trade.Iteration > 10 ? Math.Round(entitiesgen[i].Trade.Factor, 3).ToString() : "?")  + "): Balance: " + entitiesgen[i].Trade.Ballance + "$                             ");
+                    Console.WriteLine("#" + (entitiesgen.Count - i) + "(" + entitiesgen[i].Trade.Iteration + ")(f" + (entitiesgen[i].Trade.Iteration > 10 ? Math.Round(entitiesgen[i].Trade.Factor, 3).ToString() : "?")  + "): Balance: " + entitiesgen[i].Trade.Ballance + "Р                             ");
                 for (int i = 0; i < 10; i++)
                     Console.WriteLine("                                                                      ");
 
-                Console.Title = "Max iteration: " + MaxIter + ", Max factor: " + MaxFactor + ", Max ballance: " + MaxBalance + "$";
+                Console.Title = "Date: " + CurrentDate.ToShortDateString() +", Max iteration: " + MaxIter + ", Average factor: " + AverageFactor + ", Max factor: " + MaxFactor + ", Max ballance: " + MaxBalance + "Р";
 
                 if (newentitiesgen.Count == 0)
                     for (int i = newentitiesgen.Count; i < 10; i++)

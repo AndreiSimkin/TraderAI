@@ -20,7 +20,7 @@ namespace TraderAI.Bot.Commands.Analyzers
 
         public IAnalyzer Clone()
         {
-            return new Сhange();
+            return new Increase();
         }
 
         public void Generate(Entity entity, Random random, double percent) { }

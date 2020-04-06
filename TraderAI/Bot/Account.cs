@@ -39,7 +39,7 @@ namespace TraderAI.Bot
 
         public Account Clone(double balance, bool resetiter)
         {
-            return new Account() { Ballance = balance, Iteration = resetiter ? 0 : Iteration, Earned = Earned, Spent = Spent };
+            return new Account() { Ballance = balance, Iteration = resetiter ? 0 : Iteration, Earned = resetiter ? 0 : Earned, Spent = resetiter ? 0 : Spent };
         }
     }
 }
