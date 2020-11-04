@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace TraderAI.Bot.Commands.Analyzers
 {
+    [Serializable]
     public class ChangePercent : IAnalyzer
     {
         int Step { get; set; } = -1;

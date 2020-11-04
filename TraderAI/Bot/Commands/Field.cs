@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace TraderAI.Bot.Commands
 {
+    [Serializable]
     public class Field : ICommand
     {
         const int MaxTree = 4;

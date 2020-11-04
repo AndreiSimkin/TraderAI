@@ -4,6 +4,7 @@ using System.Text;
 
 namespace TraderAI.Bot.Commands
 {
+    [Serializable]
     public class Wait : ICommand
     {
         public int Ticks { get; set; } = -1;

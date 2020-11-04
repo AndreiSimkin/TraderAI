@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace TraderAI.Bot.Commands.Analyzers
 {
+    [Serializable]
     public class Increase : IAnalyzer
     {
         public bool Analyze(Entity entity, Tick tick)

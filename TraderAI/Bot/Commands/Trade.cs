@@ -4,6 +4,7 @@ using System.Text;
 
 namespace TraderAI.Bot.Commands
 {
+    [Serializable]
     public class Trade : ICommand
     {
         public long Count { get; set; }

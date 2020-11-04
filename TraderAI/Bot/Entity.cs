@@ -7,6 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace TraderAI.Bot
 {
+    [Serializable]
     public class Entity : IComparable<Entity>
     {
         public Commands.Field MainField { get; set; }

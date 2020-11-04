@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace TraderAI.Bot.Commands
 {
-    
+    [Serializable]
     public class Analyze : ICommand
     {
         double test;

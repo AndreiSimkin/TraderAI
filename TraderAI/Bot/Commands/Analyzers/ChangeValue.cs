@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace TraderAI.Bot.Commands.Analyzers
 {
+    [Serializable]
     class ChangeValue : IAnalyzer
     {
         double Value { get; set; }

@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace TraderAI.Bot.Commands
 {
+    [Serializable]
     public class Memory : ICommand
     {
         public ICommand Clone() => new Memory() { Insert = Insert };

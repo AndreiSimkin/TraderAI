@@ -4,6 +4,7 @@ using System.Text;
 
 namespace TraderAI.Bot.Commands
 {
+    [Serializable]
     public enum Code
     {
         Continue,

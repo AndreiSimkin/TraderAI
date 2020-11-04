@@ -29,13 +29,13 @@ namespace TraderAI
 
         static DateTime LastDownload { get; set; }
 
-        enum Market { MOEX = 10003}
+        enum Market { MOEX = 10003 }
 
         static List<Bot.Tick> GetHistory(DateTime date, Market market, string code)
         {
             Directory.CreateDirectory("HistoryData/" + market + "/" + code);
             if (File.Exists("HistoryData/" + market + "/" + code + "/" + date.ToShortDateString().Replace('.', '_') + ".ticks"))
-                return (List<Bot.Tick>)LoadObject("HistoryData/" + market + "/" + code +  "/" + date.ToShortDateString().Replace('.', '_') + ".ticks");
+                return (List<Bot.Tick>)LoadObject("HistoryData/" + market + "/" + code + "/" + date.ToShortDateString().Replace('.', '_') + ".ticks");
             else
             {
                 TimeSpan time = new TimeSpan(DateTime.Now.Ticks - LastDownload.Ticks);
@@ -72,6 +72,7 @@ namespace TraderAI
                 GC.Collect();
             }*/
 
+            Directory.CreateDirectory("Bots");
 
             DateTime CurrentDate = DateTime.Parse("17.03.2009");
             var Ticks = GetHistory(CurrentDate, Market.MOEX, "SBER");
@@ -82,23 +83,28 @@ namespace TraderAI
             int GTicks = Ticks.Count / 10;
             double GPercent = 0.3;
             int ECount = 45;
+            int MinIter = 10;
+            double MinAvange = 1;
+            double Inflation = 0.2;
+
 
             for (int i = entitiesgen.Count; i < 10; i++)
-                entitiesgen.Add(new Bot.Entity(random, new Bot.Account(EBalance)));
+                entitiesgen.Add(new Bot.Entity(random, new Bot.Account(EBalance,
+                    new List<Bot.Controllers.IController>()
+                    {
+                        new Bot.Controllers.Profit(MinIter, MinAvange),
+                        new Bot.Controllers.Inflation(100, Inflation, 0.01)
+                    }
+                    )));
 
-         //   bool GenerateNew = true;
+            //   bool GenerateNew = true;
 
-            double MaxFactor;
             double MaxBalance = 0;
             int MaxIter = 0;
+            double MaxAvange = 0;
             int tick = 0;
 
-            int MinIter = 10;
 
-            double MinAverageFactor = 0.1;
-            double AverageFactor = MinAverageFactor;
-            double newAverageFactor = 0;
-            int newAverageFactorCount = 0;
             while (true)
             {
                 for (int i = 0; i < GTicks; i++, tick++)
@@ -107,25 +113,13 @@ namespace TraderAI
                     {
                         do
                         {
-                            if (newAverageFactorCount > 0)
-                            {
-                                if (CurrentDate.ToShortDateString() == "03.03.2020")
-                                {
-                                    CurrentDate = DateTime.Parse("02.05.2017");
-                                }
-                                else
-                                    CurrentDate = CurrentDate.AddDays(1);
-                                Ticks.Clear();
-                                Ticks = GetHistory(CurrentDate, Market.MOEX, "SBER");
-                                GC.Collect(GC.MaxGeneration);
-                            }
-                            else if (CurrentDate.ToShortDateString() != "17.03.2009")
-                            {
-                                CurrentDate = DateTime.Parse("17.03.2009");
-                                Ticks.Clear();
-                                Ticks = GetHistory(CurrentDate, Market.MOEX, "SBER");
-                                GC.Collect(GC.MaxGeneration);
-                            }
+                            if (CurrentDate.DayOfWeek == DayOfWeek.Friday)
+                                CurrentDate = CurrentDate.AddDays(3);
+                            else
+                                CurrentDate = CurrentDate.AddDays(1);
+                            Ticks.Clear();
+                            Ticks = GetHistory(CurrentDate, Market.MOEX, "SBER");
+                            GC.Collect(GC.MaxGeneration);
                         } while (Ticks.Count < 100000);
                         tick = 0;
                         GTicks = Ticks.Count / 10;
@@ -135,80 +129,68 @@ namespace TraderAI
                 }
 
                 List<Bot.Entity> newentitiesgen = new List<Bot.Entity>();
-
-                int seg = 0;
-                for (int i = 0; i < entitiesgen.Count; i++)
-                {
-                     entitiesgen[i].Trade.Fix(EBalance);
-                    if (entitiesgen[i].Trade.Factor > AverageFactor || entitiesgen[i].Trade.Iteration < MinIter)
-                        seg++;
-                }
-
-                MaxFactor = 0;
-                newAverageFactor = 0;
-                newAverageFactorCount = 0;
-
-                for (int i = 0; i < entitiesgen.Count; i++)
-                {
-                    if (entitiesgen[i].Trade.Iteration >= MinIter)
-                    {
-                        if (entitiesgen[i].Trade.Factor > 0)
-                        {
-
-                        }
-                        if (entitiesgen[i].Trade.Factor > AverageFactor)
-                        {
-                            if (entitiesgen[i].Trade.Factor > MaxFactor)
-                                MaxFactor = entitiesgen[i].Trade.Factor;
-                            if (entitiesgen[i].Trade.Iteration > MaxIter)
-                                MaxIter = entitiesgen[i].Trade.Iteration;
-                            if (entitiesgen[i].Trade.Ballance > MaxBalance)
-                                MaxBalance = entitiesgen[i].Trade.Ballance;
-                            newAverageFactor += entitiesgen[i].Trade.Factor;
-                            newAverageFactorCount++;
-                            newentitiesgen.Add(entitiesgen[i].Clone(EBalance));
-                            if (ECount > seg)
-                            {
-                                newentitiesgen.Add(entitiesgen[i].Clone(EBalance, true));
-                                newentitiesgen.Last().Generate(random, GPercent);
-                                seg++;
-                            }
-                        }
-                    }
-                    else
-                        newentitiesgen.Add(entitiesgen[i].Clone(EBalance));
-                }
+                List<Bot.Entity> clones = new List<Bot.Entity>();
 
                 entitiesgen.Sort();
-
-                if (newAverageFactorCount > 0)
+                for (int i = entitiesgen.Count - 1; i >= 0; i--)
                 {
-                    double change = (entitiesgen.Last().Trade.Factor - AverageFactor - (entitiesgen.Last().Trade.Factor * 0.15)) / 100;
-                    if (change > 0)
-                        AverageFactor += change;
+                    switch (entitiesgen[i].Trade.Verify())
+                    {
+                        case Bot.Controllers.Result.Verified:
+                            if (MaxAvange < entitiesgen[i].Trade.Average)
+                                MaxAvange = entitiesgen[i].Trade.Average;
+                            if (MaxIter < entitiesgen[i].Trade.Iteration)
+                                MaxIter = entitiesgen[i].Trade.Iteration;
+                            newentitiesgen.Add(entitiesgen[i].Clone(EBalance));
+                            clones.Insert(0, entitiesgen[i].Clone(EBalance, true));
+                            clones[0].Generate(random, GPercent);
+                            break;
+                        case Bot.Controllers.Result.Unknown:
+                            if (newentitiesgen.Count < ECount)
+                                clones.Add(entitiesgen[i].Clone(EBalance));
+                            break;
+                        case Bot.Controllers.Result.Rejected:
+                            if (entitiesgen[i].Trade.Iteration > 300)
+                            {
+                                SaveObject("Bots/" + entitiesgen[i].Trade.Iteration + "_" + entitiesgen[i].Trade.Average.ToString().Replace(',', '_') + ".bot", entitiesgen[i].Clone(EBalance));
+                            }
+                            break;
+                    }
                 }
-                else
-                    AverageFactor = MinAverageFactor;
 
-                if (AverageFactor < MinAverageFactor)
-                    AverageFactor = MinAverageFactor;
+                if (clones.Count > 0 && newentitiesgen.Count < ECount)
+                    newentitiesgen.AddRange(clones.GetRange(0, ECount - newentitiesgen.Count > clones.Count ? clones.Count : ECount - newentitiesgen.Count));
+
 
                 Console.SetCursorPosition(0, 0);
                 for (int i = entitiesgen.Count - 1; i >= 0; i--)
-                    Console.WriteLine("#" + (entitiesgen.Count - i) + "(" + entitiesgen[i].Trade.Iteration + ")(f" + (entitiesgen[i].Trade.Iteration > 10 ? Math.Round(entitiesgen[i].Trade.Factor, 3).ToString() : "?")  + "): Balance: " + entitiesgen[i].Trade.Ballance + "Р                             ");
+                    Console.WriteLine("#" + (entitiesgen.Count - i) + "(" + entitiesgen[i].Trade.Iteration + ")(f" + (entitiesgen[i].Trade.Iteration > 10 ? Math.Round(entitiesgen[i].Trade.Average, 3).ToString() : "?") + "): Balance: " + entitiesgen[i].Trade.Ballance + "Р                             ");
                 for (int i = 0; i < 10; i++)
                     Console.WriteLine("                                                                      ");
 
-                Console.Title = "Date: " + CurrentDate.ToShortDateString() +", Max iteration: " + MaxIter + ", Average factor: " + AverageFactor + ", Max factor: " + MaxFactor + ", Max ballance: " + MaxBalance + "Р";
+                Console.Title = "Date: " + CurrentDate.ToShortDateString() + ", Max iteration: " + MaxIter + ", Max avange: " + MaxAvange + ", Max ballance: " + MaxBalance + "Р";
 
                 if (newentitiesgen.Count == 0)
+                {
                     for (int i = newentitiesgen.Count; i < 10; i++)
-                        newentitiesgen.Add(new Bot.Entity(random, new Bot.Account(EBalance)));
+                        newentitiesgen.Add(new Bot.Entity(random, new Bot.Account(EBalance,
+                            new List<Bot.Controllers.IController>()
+                            {
+                                new Bot.Controllers.Profit(MinIter, MinAvange),
+                                new Bot.Controllers.Inflation(100, Inflation, 0.01)
+                            }
+                            )));
+                    CurrentDate = DateTime.Parse("17.03.2009");
+                    Ticks.Clear();
+                    Ticks = GetHistory(CurrentDate, Market.MOEX, "SBER");
+                    GC.Collect(GC.MaxGeneration);
+                    tick = 0;
+                }
 
                 entitiesgen.Clear();
                 entitiesgen = newentitiesgen;
-
             }
+
         }
     }
 }
